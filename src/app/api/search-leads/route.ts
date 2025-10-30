@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import axios from 'axios'
-import { Prisma } from '@prisma/client'
+import type { InputJsonValue } from '@prisma/client/runtime/library'
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const searchHistory = await prisma.searchHistory.create({
       data: {
         userId: (session.user as any).id,
-        parameters: filteredParams as Prisma.InputJsonValue,
+        parameters: filteredParams as InputJsonValue,
         resultCount: leads.length
       }
     })
@@ -139,7 +139,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ leads: savedLeads })
   } catch (error) {
+    // Enhanced error logging
     console.error('Search leads error:', error)
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     
     // Log more details about the error
     let errorMessage = 'Unknown error';
@@ -149,13 +154,20 @@ export async function POST(request: NextRequest) {
       errorMessage = error.message;
       errorDetails = error.response?.data;
       if (error.response) {
-        console.error('Error response:', error.response.data)
+        console.error('Error response:', JSON.stringify(error.response.data, null, 2))
         console.error('Error status:', error.response.status)
+        console.error('Error headers:', error.response.headers)
       }
+      console.error('Request URL:', error.config?.url)
+      console.error('Request data:', JSON.stringify(error.config?.data, null, 2))
     } else if (error instanceof Error) {
       errorMessage = error.message;
+      console.error('Error name:', error.name)
+      console.error('Error cause:', (error as any).cause)
     } else {
       errorMessage = String(error);
+      console.error('Error type:', typeof error)
+      console.error('Error value:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
     }
     
     return NextResponse.json(
