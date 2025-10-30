@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import axios from 'axios'
+import { Prisma } from '@/generated/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     const searchHistory = await prisma.searchHistory.create({
       data: {
         userId: (session.user as any).id,
-        parameters: filteredParams,
+        parameters: filteredParams as Prisma.InputJsonValue,
         resultCount: leads.length
       }
     })
