@@ -200,20 +200,6 @@ const EMAIL_STATUS_LABELS: Record<string, string> = {
   'unknown': 'Unknown'
 }
 
-const COMPANY_SIZES = [
-  '0-1',
-  '2-10',
-  '11-20',
-  '21-50',
-  '51-100',
-  '101-200',
-  '201-500',
-  '501-1000',
-  '1001-2000',
-  '2001-5000',
-  '10000+'
-]
-
 const REVENUE_OPTIONS = [
   '100K',
   '500K',
@@ -260,19 +246,6 @@ const DISPLAY_LABELS = {
     'singapore': 'Singapore',
     'japan': 'Japan',
     'india': 'India'
-  },
-  companySizes: {
-    '0-1': '1 employee',
-    '2-10': '2-10 employees',
-    '11-20': '11-20 employees',
-    '21-50': '21-50 employees',
-    '51-100': '51-100 employees',
-    '101-200': '101-200 employees',
-    '201-500': '201-500 employees',
-    '501-1000': '501-1000 employees',
-    '1001-2000': '1001-2000 employees',
-    '2001-5000': '2001-5000 employees',
-    '10000+': '10000+ employees'
   }
 }
 
@@ -283,7 +256,6 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     contact_job_title: [] as string[],
     contact_location: [] as string[],
     email_status: [] as string[],
-    size: [] as string[],
     min_revenue: '',
     fetch_count: 50
   })
@@ -414,16 +386,6 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               onChange={(selected) => setFormData(prev => ({ ...prev, email_status: selected }))}
               displayLabels={EMAIL_STATUS_LABELS}
               placeholder="Select email statuses..."
-            />
-
-            {/* Company Size */}
-            <MultiSelect
-              label="Company Size"
-              options={COMPANY_SIZES}
-              selected={formData.size}
-              onChange={(selected) => setFormData(prev => ({ ...prev, size: selected }))}
-              displayLabels={DISPLAY_LABELS.companySizes}
-              placeholder="Select company sizes..."
             />
 
             {/* Min Revenue */}
