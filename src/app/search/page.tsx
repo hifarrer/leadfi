@@ -1,8 +1,8 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import SearchForm from '@/components/SearchForm'
 import LeadsGrid from '@/components/LeadsGrid'
@@ -51,11 +51,13 @@ interface Lead {
 export default function SearchPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [leads, setLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [searchParams, setSearchParams] = useState<any>(null)
+  const [searchFormParams, setSearchFormParams] = useState<any>(null)
   const [fetchCount, setFetchCount] = useState(50)
+  const [currentSearchId, setCurrentSearchId] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -63,15 +65,22 @@ export default function SearchPage() {
     }
   }, [status, router])
 
+  // Extract searchId from URL params
+  const searchId = searchParams.get('searchId')
+
   useEffect(() => {
     // Check for searchId in URL params to load saved search results
-    const urlParams = new URLSearchParams(window.location.search)
-    const searchId = urlParams.get('searchId')
-    
-    if (searchId && status === 'authenticated') {
+    if (searchId && status === 'authenticated' && currentSearchId !== searchId) {
+      setCurrentSearchId(searchId)
       loadSavedSearchResults(searchId)
+    } else if (!searchId && currentSearchId) {
+      // Reset when searchId is removed from URL
+      setCurrentSearchId(null)
+      setShowResults(false)
+      setLeads([])
     }
-  }, [status])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchId, status])
 
   const loadSavedSearchResults = async (searchId: string) => {
     setIsLoading(true)
@@ -91,7 +100,7 @@ export default function SearchPage() {
 
   const handleSearch = async (params: any) => {
     setIsLoading(true)
-    setSearchParams(params)
+    setSearchFormParams(params)
     setFetchCount(params.fetch_count || 50)
     
     try {
@@ -121,7 +130,9 @@ export default function SearchPage() {
   const handleBackToSearch = () => {
     setShowResults(false)
     setLeads([])
-    setSearchParams(null)
+    setSearchFormParams(null)
+    // Clear the searchId from URL
+    router.push('/search')
   }
 
   if (status === 'loading') {

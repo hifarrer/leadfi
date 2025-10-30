@@ -54,17 +54,9 @@ export default function HistoryPage() {
     }
   }
 
-  const viewSearchResults = async (searchId: string) => {
-    try {
-      const response = await fetch(`/api/search-history/${searchId}/leads`)
-      if (response.ok) {
-        const data = await response.json()
-        // Navigate to search page with results
-        router.push(`/search?searchId=${searchId}`)
-      }
-    } catch (error) {
-      console.error('Error fetching search results:', error)
-    }
+  const viewSearchResults = (searchId: string) => {
+    // Navigate to search page with results - let the search page handle fetching
+    router.push(`/search?searchId=${searchId}`)
   }
 
   if (status === 'loading' || isLoading) {
