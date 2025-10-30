@@ -8,7 +8,6 @@ import {
   UserGroupIcon, 
   ChartBarIcon, 
   DocumentArrowDownIcon,
-  PlayIcon,
   ChevronDownIcon,
   CheckCircleIcon,
   XMarkIcon
@@ -428,20 +427,19 @@ export default function LandingPage() {
               Watch how easy it is to find and export quality leads
             </p>
           </div>
-          <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl shadow-xl overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-24 h-24 bg-blue-600 rounded-full mb-4 hover:bg-blue-700 transition-colors cursor-pointer shadow-lg">
-                  <PlayIcon className="h-12 w-12 text-white ml-1" />
-                </div>
-                <p className="text-gray-600 font-medium">
-                  Demo Video Coming Soon
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Placeholder for product demonstration video
-                </p>
-              </div>
-            </div>
+          <div className="relative aspect-video rounded-2xl shadow-xl overflow-hidden">
+            <video
+              className="w-full h-full object-cover"
+              controls
+              preload="metadata"
+              poster=""
+            >
+              <source
+                src="https://res.cloudinary.com/dqemas8ht/video/upload/v1761863702/LeadFindDemo_ji2428.mp4"
+                type="video/mp4"
+              />
+              Your browser does not support the video tag.
+            </video>
           </div>
         </div>
       </section>
