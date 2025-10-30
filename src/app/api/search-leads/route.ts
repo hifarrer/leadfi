@@ -76,15 +76,24 @@ export async function POST(request: NextRequest) {
     }
 
     const leads = apifyResponse.data || []
+    console.log(`Received ${leads.length} leads from Apify API`)
 
     // Save search history
-    const searchHistory = await prisma.searchHistory.create({
-      data: {
-        userId: (session.user as any).id,
-        parameters: filteredParams as InputJsonValue,
-        resultCount: leads.length
-      }
-    })
+    let searchHistory;
+    try {
+      console.log('Creating search history...')
+      searchHistory = await prisma.searchHistory.create({
+        data: {
+          userId: (session.user as any).id,
+          parameters: filteredParams as InputJsonValue,
+          resultCount: leads.length
+        }
+      })
+      console.log('Search history created:', searchHistory.id)
+    } catch (dbError) {
+      console.error('Error creating search history:', dbError)
+      throw dbError
+    }
 
     // Save leads to database
     const leadData = leads.map((lead: any) => ({
@@ -126,16 +135,35 @@ export async function POST(request: NextRequest) {
       companyTechnologies: lead.company_technologies || null,
     }))
 
-    await prisma.lead.createMany({
-      data: leadData
-    })
+    try {
+      console.log(`Saving ${leadData.length} leads to database...`)
+      if (leadData.length > 0) {
+        await prisma.lead.createMany({
+          data: leadData
+        })
+        console.log('Leads saved successfully')
+      } else {
+        console.log('No leads to save')
+      }
+    } catch (dbError) {
+      console.error('Error saving leads:', dbError)
+      throw dbError
+    }
 
     // Return the processed data from database instead of raw API response
-    const savedLeads = await prisma.lead.findMany({
-      where: {
-        searchHistoryId: searchHistory.id
-      }
-    })
+    let savedLeads;
+    try {
+      console.log('Fetching saved leads from database...')
+      savedLeads = await prisma.lead.findMany({
+        where: {
+          searchHistoryId: searchHistory.id
+        }
+      })
+      console.log(`Retrieved ${savedLeads.length} saved leads`)
+    } catch (dbError) {
+      console.error('Error fetching saved leads:', dbError)
+      throw dbError
+    }
 
     return NextResponse.json({ leads: savedLeads })
   } catch (error) {
