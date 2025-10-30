@@ -1,0 +1,151 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import axios from 'axios'
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user || !(session.user as any).id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const searchParams = await request.json()
+    
+    // Log the search parameters for debugging
+    console.log('Search parameters received:', JSON.stringify(searchParams, null, 2))
+    
+    // Filter out empty arrays and empty strings from search parameters
+    const filteredParams = Object.fromEntries(
+      Object.entries(searchParams).filter(([key, value]) => {
+        if (Array.isArray(value)) {
+          return value.length > 0
+        }
+        if (typeof value === 'string') {
+          return value.trim() !== ''
+        }
+        return value !== null && value !== undefined
+      })
+    )
+    
+    console.log('Filtered parameters:', JSON.stringify(filteredParams, null, 2))
+    
+    // Ensure we have at least some parameters
+    if (Object.keys(filteredParams).length === 0) {
+      return NextResponse.json(
+        { error: 'At least one search parameter is required' },
+        { status: 400 }
+      )
+    }
+
+    // Call Apify API
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken) {
+      return NextResponse.json(
+        { error: 'APIFY_API_TOKEN environment variable is not set' },
+        { status: 500 }
+      )
+    }
+
+    let apifyResponse;
+    try {
+      apifyResponse = await axios.post(
+        `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=${apifyToken}`,
+        filteredParams,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+    } catch (apiError) {
+      console.error('Apify API error:', apiError.response?.data || apiError.message);
+      throw apiError; // Re-throw the error to be handled by the outer catch block
+    }
+
+    const leads = apifyResponse.data || []
+
+    // Save search history
+    const searchHistory = await prisma.searchHistory.create({
+      data: {
+        userId: (session.user as any).id,
+        parameters: filteredParams,
+        resultCount: leads.length
+      }
+    })
+
+    // Save leads to database
+    const leadData = leads.map((lead: any) => ({
+      searchHistoryId: searchHistory.id,
+      firstName: lead.first_name || null,
+      lastName: lead.last_name || null,
+      email: lead.email || null,
+      personalEmail: lead.personal_email || null,
+      fullName: lead.full_name || null,
+      jobTitle: lead.job_title || null,
+      linkedin: lead.linkedin || null,
+      companyName: lead.company_name || null,
+      companyWebsite: lead.company_website || null,
+      industry: lead.industry || null,
+      companySize: lead.company_size || null,
+      headline: lead.headline || null,
+      seniorityLevel: lead.seniority_level || null,
+      functionalLevel: lead.functional_level || null,
+      city: lead.city || null,
+      state: lead.state || null,
+      country: lead.country || null,
+      companyLinkedin: lead.company_linkedin || null,
+      companyLinkedinUid: lead.company_linkedin_uid || null,
+      companyFoundedYear: lead.company_founded_year || null,
+      companyDomain: lead.company_domain || null,
+      companyPhone: lead.company_phone || null,
+      companyStreetAddress: lead.company_street_address || null,
+      companyFullAddress: lead.company_full_address || null,
+      companyState: lead.company_state || null,
+      companyCity: lead.company_city || null,
+      companyCountry: lead.company_country || null,
+      companyPostalCode: lead.company_postal_code || null,
+      keywords: lead.keywords || null,
+      companyDescription: lead.company_description || null,
+      companyAnnualRevenue: lead.company_annual_revenue || null,
+      companyAnnualRevenueClean: lead.company_annual_revenue_clean || null,
+      companyTotalFunding: lead.company_total_funding || null,
+      companyTotalFundingClean: lead.company_total_funding_clean || null,
+      companyTechnologies: lead.company_technologies || null,
+    }))
+
+    await prisma.lead.createMany({
+      data: leadData
+    })
+
+    // Return the processed data from database instead of raw API response
+    const savedLeads = await prisma.lead.findMany({
+      where: {
+        searchHistoryId: searchHistory.id
+      }
+    })
+
+    return NextResponse.json({ leads: savedLeads })
+  } catch (error) {
+    console.error('Search leads error:', error)
+    
+    // Log more details about the error
+    if (error.response) {
+      console.error('Error response:', error.response.data)
+      console.error('Error status:', error.response.status)
+    }
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to search leads',
+        details: error.response?.data || error.message
+      },
+      { status: 500 }
+    )
+  }
+}

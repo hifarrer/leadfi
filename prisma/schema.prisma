@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  password      String
+  name          String?
+  createdAt     DateTime        @default(now())
+  searchHistory SearchHistory[]
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  parameters  Json
+  resultCount Int
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads       Lead[]
+}
+
+model Lead {
+  id                      String        @id @default(cuid())
+  searchHistoryId         String
+  firstName               String?
+  lastName                String?
+  email                   String?
+  personalEmail           String?
+  fullName                String?
+  jobTitle                String?
+  linkedin                String?
+  companyName             String?
+  companyWebsite          String?
+  industry                String?
+  companySize             String?
+  headline                String?
+  seniorityLevel          String?
+  functionalLevel         String?
+  city                    String?
+  state                   String?
+  country                 String?
+  companyLinkedin         String?
+  companyLinkedinUid      String?
+  companyFoundedYear      String?
+  companyDomain           String?
+  companyPhone            String?
+  companyStreetAddress    String?
+  companyFullAddress      String?
+  companyState            String?
+  companyCity             String?
+  companyCountry          String?
+  companyPostalCode       String?
+  keywords                String?
+  companyDescription      String?
+  companyAnnualRevenue    String?
+  companyAnnualRevenueClean String?
+  companyTotalFunding     String?
+  companyTotalFundingClean String?
+  companyTechnologies     String?
+  searchHistory           SearchHistory @relation(fields: [searchHistoryId], references: [id], onDelete: Cascade)
+}
