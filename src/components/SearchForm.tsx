@@ -187,10 +187,17 @@ const LOCATIONS = [
 ]
 
 const EMAIL_STATUS = [
-  'Validated',
-  'Not Validated',
-  'Unknown'
+  'validated',
+  'not_validated',
+  'unknown'
 ]
+
+// Display labels for email status (user-friendly format)
+const EMAIL_STATUS_LABELS: Record<string, string> = {
+  'validated': 'Validated',
+  'not_validated': 'Not Validated',
+  'unknown': 'Unknown'
+}
 
 const COMPANY_SIZES = [
   '0-1',
@@ -397,7 +404,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               options={EMAIL_STATUS}
               selected={formData.email_status}
               onChange={(selected) => setFormData(prev => ({ ...prev, email_status: selected }))}
-              displayLabels={Object.fromEntries(EMAIL_STATUS.map(status => [status, status]))}
+              displayLabels={EMAIL_STATUS_LABELS}
               placeholder="Select email statuses..."
             />
 
