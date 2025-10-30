@@ -6,8 +6,11 @@ import axios from 'axios'
 import type { InputJsonValue } from '@prisma/client/runtime/library'
 
 export async function POST(request: NextRequest) {
+  console.log('[SEARCH-LEADS] Request received')
   try {
+    console.log('[SEARCH-LEADS] Getting session...')
     const session = await getServerSession(authOptions)
+    console.log('[SEARCH-LEADS] Session:', session ? 'found' : 'not found')
     
     if (!session?.user || !(session.user as any).id) {
       return NextResponse.json(
@@ -16,10 +19,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('[SEARCH-LEADS] Parsing request body...')
     const searchParams = await request.json()
-    
-    // Log the search parameters for debugging
-    console.log('Search parameters received:', JSON.stringify(searchParams, null, 2))
+    console.log('[SEARCH-LEADS] Search parameters received:', JSON.stringify(searchParams, null, 2))
     
     // Filter out empty arrays and empty strings from search parameters
     const filteredParams = Object.fromEntries(
@@ -34,9 +36,10 @@ export async function POST(request: NextRequest) {
       })
     )
     
-    console.log('Filtered parameters:', JSON.stringify(filteredParams, null, 2))
+    console.log('[SEARCH-LEADS] Filtered parameters:', JSON.stringify(filteredParams, null, 2))
     
     // Ensure we have at least some parameters
+    console.log('[SEARCH-LEADS] Validating parameters...')
     if (Object.keys(filteredParams).length === 0) {
       return NextResponse.json(
         { error: 'At least one search parameter is required' },
@@ -45,16 +48,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Apify API
+    console.log('[SEARCH-LEADS] Getting Apify token...')
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) {
+      console.error('[SEARCH-LEADS] ERROR: APIFY_API_TOKEN not set')
       return NextResponse.json(
         { error: 'APIFY_API_TOKEN environment variable is not set' },
         { status: 500 }
       )
     }
 
+    console.log('[SEARCH-LEADS] Calling Apify API...')
     let apifyResponse;
     try {
+      console.log('[SEARCH-LEADS] Apify request URL:', `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=***`)
       apifyResponse = await axios.post(
         `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=${apifyToken}`,
         filteredParams,
@@ -75,13 +82,15 @@ export async function POST(request: NextRequest) {
       throw apiError; // Re-throw the error to be handled by the outer catch block
     }
 
+    console.log('[SEARCH-LEADS] Apify API response received')
     const leads = apifyResponse.data || []
-    console.log(`Received ${leads.length} leads from Apify API`)
+    console.log(`[SEARCH-LEADS] Received ${leads.length} leads from Apify API`)
 
     // Save search history
+    console.log('[SEARCH-LEADS] Initializing Prisma for search history...')
     let searchHistory;
     try {
-      console.log('Creating search history...')
+      console.log('[SEARCH-LEADS] Creating search history in database...')
       searchHistory = await prisma.searchHistory.create({
         data: {
           userId: (session.user as any).id,
@@ -89,9 +98,14 @@ export async function POST(request: NextRequest) {
           resultCount: leads.length
         }
       })
-      console.log('Search history created:', searchHistory.id)
+      console.log('[SEARCH-LEADS] Search history created successfully:', searchHistory.id)
     } catch (dbError) {
-      console.error('Error creating search history:', dbError)
+      console.error('[SEARCH-LEADS] ERROR creating search history:', dbError)
+      if (dbError instanceof Error) {
+        console.error('[SEARCH-LEADS] Error name:', dbError.name)
+        console.error('[SEARCH-LEADS] Error message:', dbError.message)
+        console.error('[SEARCH-LEADS] Error stack:', dbError.stack)
+      }
       throw dbError
     }
 
@@ -135,40 +149,54 @@ export async function POST(request: NextRequest) {
       companyTechnologies: lead.company_technologies || null,
     }))
 
+    console.log('[SEARCH-LEADS] Preparing to save leads...')
     try {
-      console.log(`Saving ${leadData.length} leads to database...`)
+      console.log(`[SEARCH-LEADS] Saving ${leadData.length} leads to database...`)
       if (leadData.length > 0) {
         await prisma.lead.createMany({
           data: leadData
         })
-        console.log('Leads saved successfully')
+        console.log('[SEARCH-LEADS] Leads saved successfully')
       } else {
-        console.log('No leads to save')
+        console.log('[SEARCH-LEADS] No leads to save')
       }
     } catch (dbError) {
-      console.error('Error saving leads:', dbError)
+      console.error('[SEARCH-LEADS] ERROR saving leads:', dbError)
+      if (dbError instanceof Error) {
+        console.error('[SEARCH-LEADS] Error name:', dbError.name)
+        console.error('[SEARCH-LEADS] Error message:', dbError.message)
+        console.error('[SEARCH-LEADS] Error stack:', dbError.stack)
+      }
       throw dbError
     }
 
     // Return the processed data from database instead of raw API response
+    console.log('[SEARCH-LEADS] Fetching saved leads...')
     let savedLeads;
     try {
-      console.log('Fetching saved leads from database...')
+      console.log('[SEARCH-LEADS] Querying database for saved leads...')
       savedLeads = await prisma.lead.findMany({
         where: {
           searchHistoryId: searchHistory.id
         }
       })
-      console.log(`Retrieved ${savedLeads.length} saved leads`)
+      console.log(`[SEARCH-LEADS] Retrieved ${savedLeads.length} saved leads`)
     } catch (dbError) {
-      console.error('Error fetching saved leads:', dbError)
+      console.error('[SEARCH-LEADS] ERROR fetching saved leads:', dbError)
+      if (dbError instanceof Error) {
+        console.error('[SEARCH-LEADS] Error name:', dbError.name)
+        console.error('[SEARCH-LEADS] Error message:', dbError.message)
+        console.error('[SEARCH-LEADS] Error stack:', dbError.stack)
+      }
       throw dbError
     }
 
+    console.log('[SEARCH-LEADS] Returning success response')
     return NextResponse.json({ leads: savedLeads })
   } catch (error) {
     // Enhanced error logging
-    console.error('Search leads error:', error)
+    console.error('[SEARCH-LEADS] ========== FATAL ERROR ==========')
+    console.error('[SEARCH-LEADS] Error object:', error)
     if (error instanceof Error) {
       console.error('Error message:', error.message)
       console.error('Error stack:', error.stack)
