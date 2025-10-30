@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import axios from 'axios'
-import { Prisma } from '@/generated/client'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
