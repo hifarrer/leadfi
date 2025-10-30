@@ -59,8 +59,8 @@ export default function HistoryPage() {
       const response = await fetch(`/api/search-history/${searchId}/leads`)
       if (response.ok) {
         const data = await response.json()
-        // Navigate to main page with results
-        router.push(`/?searchId=${searchId}`)
+        // Navigate to search page with results
+        router.push(`/search?searchId=${searchId}`)
       }
     } catch (error) {
       console.error('Error fetching search results:', error)
