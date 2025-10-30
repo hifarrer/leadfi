@@ -64,7 +64,13 @@ export async function POST(request: NextRequest) {
         }
       )
     } catch (apiError) {
-      console.error('Apify API error:', apiError.response?.data || apiError.message);
+      if (axios.isAxiosError(apiError)) {
+        console.error('Apify API error:', apiError.response?.data || apiError.message);
+      } else if (apiError instanceof Error) {
+        console.error('Apify API error:', apiError.message);
+      } else {
+        console.error('Apify API error:', String(apiError));
+      }
       throw apiError; // Re-throw the error to be handled by the outer catch block
     }
 
@@ -135,15 +141,26 @@ export async function POST(request: NextRequest) {
     console.error('Search leads error:', error)
     
     // Log more details about the error
-    if (error.response) {
-      console.error('Error response:', error.response.data)
-      console.error('Error status:', error.response.status)
+    let errorMessage = 'Unknown error';
+    let errorDetails: any = null;
+    
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.message;
+      errorDetails = error.response?.data;
+      if (error.response) {
+        console.error('Error response:', error.response.data)
+        console.error('Error status:', error.response.status)
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
     }
     
     return NextResponse.json(
       { 
         error: 'Failed to search leads',
-        details: error.response?.data || error.message
+        details: errorDetails || errorMessage
       },
       { status: 500 }
     )
