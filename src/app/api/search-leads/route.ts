@@ -59,21 +59,44 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[SEARCH-LEADS] Calling Apify API...')
+    console.log('[SEARCH-LEADS] Apify request URL:', `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=***`)
+    console.log('[SEARCH-LEADS] Request payload:', JSON.stringify(filteredParams, null, 2))
+    
     let apifyResponse;
+    const startTime = Date.now()
     try {
-      console.log('[SEARCH-LEADS] Apify request URL:', `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=***`)
+      console.log('[SEARCH-LEADS] Starting Apify request at:', new Date().toISOString())
+      
       apifyResponse = await axios.post(
         `https://api.apify.com/v2/acts/code_crafter~leads-finder/run-sync-get-dataset-items?token=${apifyToken}`,
         filteredParams,
         {
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 120000 // 2 minutes timeout (120 seconds should be enough for 50-100 records)
         }
       )
+      
+      const duration = Date.now() - startTime
+      console.log(`[SEARCH-LEADS] Apify request completed in ${duration}ms (${(duration/1000).toFixed(2)}s)`)
     } catch (apiError) {
-      console.error('[SEARCH-LEADS] Apify API error occurred')
+      const duration = Date.now() - startTime
+      console.error(`[SEARCH-LEADS] Apify API error occurred after ${duration}ms`)
+      
       if (axios.isAxiosError(apiError)) {
+        // Handle timeout errors
+        if (apiError.code === 'ECONNABORTED' || apiError.message.includes('timeout')) {
+          console.error('[SEARCH-LEADS] Request timeout - Apify took too long to respond')
+          return NextResponse.json(
+            { 
+              error: 'Request timeout',
+              details: 'The search is taking longer than expected. Please try again or reduce the number of results.'
+            },
+            { status: 504 }
+          )
+        }
+        
         const errorData = apiError.response?.data
         console.error('[SEARCH-LEADS] Apify API error response:', JSON.stringify(errorData, null, 2))
         
@@ -107,8 +130,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[SEARCH-LEADS] Apify API response received')
-    const leads = apifyResponse.data || []
-    console.log(`[SEARCH-LEADS] Received ${leads.length} leads from Apify API`)
+    console.log('[SEARCH-LEADS] Response status:', apifyResponse.status)
+    console.log('[SEARCH-LEADS] Response data type:', typeof apifyResponse.data)
+    console.log('[SEARCH-LEADS] Response data keys:', apifyResponse.data ? Object.keys(apifyResponse.data) : 'no data')
+    
+    // Handle different response structures from Apify
+    let leads = []
+    if (Array.isArray(apifyResponse.data)) {
+      leads = apifyResponse.data
+    } else if (apifyResponse.data?.data && Array.isArray(apifyResponse.data.data)) {
+      leads = apifyResponse.data.data
+    } else if (apifyResponse.data?.items && Array.isArray(apifyResponse.data.items)) {
+      leads = apifyResponse.data.items
+    } else if (apifyResponse.data?.results && Array.isArray(apifyResponse.data.results)) {
+      leads = apifyResponse.data.results
+    }
+    
+    console.log(`[SEARCH-LEADS] Extracted ${leads.length} leads from Apify response`)
+    
+    if (leads.length === 0) {
+      console.warn('[SEARCH-LEADS] WARNING: No leads found in response. Full response:', JSON.stringify(apifyResponse.data, null, 2))
+    }
 
     // Save search history
     console.log('[SEARCH-LEADS] Initializing Prisma for search history...')

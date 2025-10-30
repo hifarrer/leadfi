@@ -7,6 +7,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import SearchForm from '@/components/SearchForm'
 import LeadsGrid from '@/components/LeadsGrid'
 import ExportButtons from '@/components/ExportButtons'
+import ProgressBar from '@/components/ProgressBar'
 
 interface Lead {
   id: string
@@ -54,6 +55,7 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [searchParams, setSearchParams] = useState<any>(null)
+  const [fetchCount, setFetchCount] = useState(50)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -90,6 +92,7 @@ export default function SearchPage() {
   const handleSearch = async (params: any) => {
     setIsLoading(true)
     setSearchParams(params)
+    setFetchCount(params.fetch_count || 50)
     
     try {
       const response = await fetch('/api/search-leads', {
@@ -180,7 +183,16 @@ export default function SearchPage() {
       {/* Main Content */}
       <main className="py-8">
         {!showResults ? (
-          <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            {isLoading && (
+              <div className="mb-6">
+                <div className="bg-white rounded-2xl shadow-xl p-6">
+                  <ProgressBar fetchCount={fetchCount} isActive={isLoading} />
+                </div>
+              </div>
+            )}
+            <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+          </div>
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-2xl shadow-xl p-8">
