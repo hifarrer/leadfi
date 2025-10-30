@@ -38,6 +38,28 @@ export async function POST(request: NextRequest) {
     
     console.log('[SEARCH-LEADS] Filtered parameters:', JSON.stringify(filteredParams, null, 2))
     
+    // Enforce maximum fetch_count limit (50 for demo/free plan)
+    const fetchCountValue = filteredParams.fetch_count
+    let validatedFetchCount = 50 // default
+    
+    if (fetchCountValue !== undefined && fetchCountValue !== null) {
+      const requestedCount = typeof fetchCountValue === 'string' 
+        ? parseInt(fetchCountValue, 10) 
+        : typeof fetchCountValue === 'number'
+        ? fetchCountValue
+        : 50
+        
+      if (!isNaN(requestedCount) && requestedCount > 50) {
+        console.warn(`[SEARCH-LEADS] User attempted to request ${requestedCount} records, limiting to 50`)
+        validatedFetchCount = 50
+      } else if (!isNaN(requestedCount)) {
+        validatedFetchCount = Math.min(Math.max(requestedCount, 1), 50)
+      }
+    }
+    
+    filteredParams.fetch_count = validatedFetchCount
+    console.log('[SEARCH-LEADS] Validated fetch_count:', validatedFetchCount)
+    
     // Ensure we have at least some parameters
     console.log('[SEARCH-LEADS] Validating parameters...')
     if (Object.keys(filteredParams).length === 0) {

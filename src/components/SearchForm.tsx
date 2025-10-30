@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import MultiSelect from './MultiSelect'
 
@@ -309,7 +310,14 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSearch(formData)
+    
+    // Enforce max 50 records - client-side validation
+    const validatedData = {
+      ...formData,
+      fetch_count: Math.min(Math.max(formData.fetch_count || 50, 1), 50)
+    }
+    
+    onSearch(validatedData)
   }
 
   return (
@@ -443,11 +451,19 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               <input
                 type="number"
                 min="1"
-                max="1000"
+                max="50"
                 value={formData.fetch_count}
-                onChange={(e) => setFormData(prev => ({ ...prev, fetch_count: parseInt(e.target.value) || 50 }))}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value) || 1
+                  const limitedValue = Math.min(Math.max(newValue, 1), 50)
+                  setFormData(prev => ({ ...prev, fetch_count: limitedValue }))
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                readOnly={false}
               />
+              <p className="mt-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <strong>Free Plan Limit:</strong> Maximum 50 results per search. <Link href="/pricing" className="text-blue-600 hover:text-blue-800 underline font-medium">Please upgrade</Link> to access more records.
+              </p>
             </div>
           </div>
 

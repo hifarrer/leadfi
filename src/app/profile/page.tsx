@@ -153,6 +153,12 @@ export default function ProfilePage() {
                 Search History
               </button>
               <button
+                onClick={() => router.push('/pricing')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Pricing
+              </button>
+              <button
                 onClick={() => router.push('/api/auth/signout')}
                 className="text-sm text-gray-600 hover:text-gray-800"
               >
