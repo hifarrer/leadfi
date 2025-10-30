@@ -72,14 +72,38 @@ export async function POST(request: NextRequest) {
         }
       )
     } catch (apiError) {
+      console.error('[SEARCH-LEADS] Apify API error occurred')
       if (axios.isAxiosError(apiError)) {
-        console.error('Apify API error:', apiError.response?.data || apiError.message);
+        const errorData = apiError.response?.data
+        console.error('[SEARCH-LEADS] Apify API error response:', JSON.stringify(errorData, null, 2))
+        
+        // Check if it's a validation error
+        if (errorData?.error?.type === 'invalid-input') {
+          const errorMessage = errorData.error.message || 'Invalid search parameters'
+          console.error('[SEARCH-LEADS] Validation error:', errorMessage)
+          return NextResponse.json(
+            { 
+              error: 'Invalid search parameters',
+              details: errorMessage
+            },
+            { status: 400 }
+          )
+        }
+        
+        // Return a user-friendly error message
+        return NextResponse.json(
+          { 
+            error: 'Failed to search leads',
+            details: errorData?.error?.message || apiError.message || 'An error occurred while searching'
+          },
+          { status: apiError.response?.status || 500 }
+        )
       } else if (apiError instanceof Error) {
-        console.error('Apify API error:', apiError.message);
+        console.error('[SEARCH-LEADS] Apify API error:', apiError.message)
       } else {
-        console.error('Apify API error:', String(apiError));
+        console.error('[SEARCH-LEADS] Apify API error:', String(apiError))
       }
-      throw apiError; // Re-throw the error to be handled by the outer catch block
+      throw apiError; // Re-throw other errors to be handled by the outer catch block
     }
 
     console.log('[SEARCH-LEADS] Apify API response received')

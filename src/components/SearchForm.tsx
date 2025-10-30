@@ -10,16 +10,154 @@ interface SearchFormProps {
 }
 
 const INDUSTRIES = [
+  'information technology & services',
+  'construction',
   'marketing & advertising',
-  'technology',
-  'healthcare',
-  'finance',
   'real estate',
-  'education',
-  'manufacturing',
+  'health, wellness & fitness',
+  'management consulting',
+  'computer software',
+  'internet',
   'retail',
-  'consulting',
-  'media & entertainment'
+  'financial services',
+  'consumer services',
+  'hospital & health care',
+  'automotive',
+  'restaurants',
+  'education management',
+  'food & beverages',
+  'design',
+  'hospitality',
+  'accounting',
+  'events services',
+  'nonprofit organization management',
+  'entertainment',
+  'electrical/electronic manufacturing',
+  'leisure, travel & tourism',
+  'professional training & coaching',
+  'transportation/trucking/railroad',
+  'law practice',
+  'apparel & fashion',
+  'architecture & planning',
+  'mechanical or industrial engineering',
+  'insurance',
+  'telecommunications',
+  'human resources',
+  'staffing & recruiting',
+  'sports',
+  'legal services',
+  'media production',
+  'oil & energy',
+  'wholesale',
+  'machinery',
+  'consumer goods',
+  'music',
+  'photography',
+  'medical practice',
+  'cosmetics',
+  'environmental services',
+  'graphic design',
+  'business supplies & equipment',
+  'renewables & environment',
+  'facilities services',
+  'publishing',
+  'arts & crafts',
+  'food production',
+  'building materials',
+  'civil engineering',
+  'public relations & communications',
+  'religious institutions',
+  'printing',
+  'higher education',
+  'mining & metals',
+  'furniture',
+  'logistics & supply chain',
+  'research',
+  'pharmaceuticals',
+  'individual & family services',
+  'medical devices',
+  'biotechnology',
+  'information services',
+  'international trade & development',
+  'motion pictures & film',
+  'broadcast media',
+  'consumer electronics',
+  'banking',
+  'import & export',
+  'primary/secondary education',
+  'fine art',
+  'airlines/aviation',
+  'computer & network security',
+  'maritime',
+  'luxury goods & jewelry',
+  'veterinary',
+  'venture capital & private equity',
+  'mental health care',
+  'industrial automation',
+  'recreational facilities & services',
+  'textiles',
+  'performing arts',
+  'utilities',
+  'sporting goods',
+  'wine & spirits',
+  'plastics',
+  'aviation & aerospace',
+  'program development',
+  'translation & localization',
+  'philanthropy',
+  'public safety',
+  'investment banking',
+  'government relations',
+  'law enforcement',
+  'fund-raising',
+  'package/freight delivery',
+  'wireless',
+  'political organization',
+  'international affairs',
+  'public policy',
+  'libraries',
+  'gambling & casinos',
+  'animation',
+  'dairy',
+  'supermarkets',
+  'fishery',
+  'military',
+  'ranching',
+  'railroad manufacture',
+  'semiconductors',
+  'capital markets',
+  'glass, ceramics & concrete',
+  'think tanks',
+  'paper & forest products',
+  'newspapers',
+  'shipbuilding',
+  'defense & space',
+  'warehousing',
+  'museums & institutions',
+  'alternative medicine',
+  'market research',
+  'computer networking',
+  'computer hardware',
+  'executive office',
+  'packaging & containers',
+  'computer games',
+  'commercial real estate',
+  'writing & editing',
+  'chemicals',
+  'government administration',
+  'online media',
+  'investment management',
+  'farming',
+  'outsourcing/offshoring',
+  'tobacco',
+  'security & investigations',
+  'e-learning',
+  'judiciary',
+  'alternative dispute resolution',
+  'nanotechnology',
+  'civic & social organization',
+  'agriculture',
+  'legislative office'
 ]
 
 const JOB_TITLES = [
@@ -49,9 +187,9 @@ const LOCATIONS = [
 ]
 
 const EMAIL_STATUS = [
-  'validated',
-  'guessed',
-  'unavailable'
+  'Validated',
+  'Not Validated',
+  'Unknown'
 ]
 
 const COMPANY_SIZES = [
@@ -77,20 +215,20 @@ const REVENUE_OPTIONS = [
   '100M+'
 ]
 
+// Helper function to format industry names for display (capitalize each word)
+function formatIndustryLabel(industry: string): string {
+  return industry
+    .split(/[\s&/]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+}
+
 // Display labels for proper case display
 const DISPLAY_LABELS = {
-  industries: {
-    'marketing & advertising': 'Marketing & Advertising',
-    'technology': 'Technology',
-    'healthcare': 'Healthcare',
-    'finance': 'Finance',
-    'real estate': 'Real Estate',
-    'education': 'Education',
-    'manufacturing': 'Manufacturing',
-    'retail': 'Retail',
-    'consulting': 'Consulting',
-    'media & entertainment': 'Media & Entertainment'
-  },
+  industries: Object.fromEntries(
+    INDUSTRIES.map(industry => [industry, formatIndustryLabel(industry)])
+  ),
   jobTitles: {
     'ceo': 'CEO',
     'cto': 'CTO',
@@ -259,7 +397,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               options={EMAIL_STATUS}
               selected={formData.email_status}
               onChange={(selected) => setFormData(prev => ({ ...prev, email_status: selected }))}
-              displayLabels={Object.fromEntries(EMAIL_STATUS.map(status => [status, status.charAt(0).toUpperCase() + status.slice(1)]))}
+              displayLabels={Object.fromEntries(EMAIL_STATUS.map(status => [status, status]))}
               placeholder="Select email statuses..."
             />
 
