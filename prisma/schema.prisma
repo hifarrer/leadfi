@@ -16,6 +16,8 @@ model User {
   email         String          @unique
   password      String
   name          String?
+  planId        String?
+  plan          Plan?           @relation(fields: [planId], references: [id], onDelete: SetNull)
   createdAt     DateTime        @default(now())
   searchHistory SearchHistory[]
 }
@@ -31,42 +33,55 @@ model SearchHistory {
 }
 
 model Lead {
-  id                      String        @id @default(cuid())
-  searchHistoryId         String
-  firstName               String?
-  lastName                String?
-  email                   String?
-  personalEmail           String?
-  fullName                String?
-  jobTitle                String?
-  linkedin                String?
-  companyName             String?
-  companyWebsite          String?
-  industry                String?
-  companySize             String?
-  headline                String?
-  seniorityLevel          String?
-  functionalLevel         String?
-  city                    String?
-  state                   String?
-  country                 String?
-  companyLinkedin         String?
-  companyLinkedinUid      String?
-  companyFoundedYear      String?
-  companyDomain           String?
-  companyPhone            String?
-  companyStreetAddress    String?
-  companyFullAddress      String?
-  companyState            String?
-  companyCity             String?
-  companyCountry          String?
-  companyPostalCode       String?
-  keywords                String?
-  companyDescription      String?
-  companyAnnualRevenue    String?
+  id                        String        @id @default(cuid())
+  searchHistoryId           String
+  firstName                 String?
+  lastName                  String?
+  email                     String?
+  personalEmail             String?
+  fullName                  String?
+  jobTitle                  String?
+  linkedin                  String?
+  companyName               String?
+  companyWebsite            String?
+  industry                  String?
+  companySize               String?
+  headline                  String?
+  seniorityLevel            String?
+  functionalLevel           String?
+  city                      String?
+  state                     String?
+  country                   String?
+  companyLinkedin           String?
+  companyLinkedinUid        String?
+  companyFoundedYear        String?
+  companyDomain             String?
+  companyPhone              String?
+  companyStreetAddress      String?
+  companyFullAddress        String?
+  companyState              String?
+  companyCity               String?
+  companyCountry            String?
+  companyPostalCode         String?
+  keywords                  String?
+  companyDescription        String?
+  companyAnnualRevenue      String?
   companyAnnualRevenueClean String?
-  companyTotalFunding     String?
-  companyTotalFundingClean String?
-  companyTechnologies     String?
-  searchHistory           SearchHistory @relation(fields: [searchHistoryId], references: [id], onDelete: Cascade)
+  companyTotalFunding       String?
+  companyTotalFundingClean  String?
+  companyTechnologies       String?
+  searchHistory             SearchHistory @relation(fields: [searchHistoryId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  name         String
+  monthlyPrice Decimal  @db.Decimal(10, 2)
+  yearlyPrice  Decimal  @db.Decimal(10, 2)
+  features     Json // Array of feature strings
+  isPopular    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  users        User[]
 }

@@ -28,12 +28,20 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Find the Free plan to assign by default
+    const freePlan = await prisma.plan.findFirst({
+      where: {
+        name: 'Free'
+      }
+    })
+
+    // Create user with Free plan
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name: name || null,
+        planId: freePlan?.id || null,
       }
     })
 

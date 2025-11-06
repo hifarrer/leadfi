@@ -8,15 +8,50 @@ import {
   CheckCircleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+interface Plan {
+  id: string
+  name: string
+  monthlyPrice: number | string
+  yearlyPrice: number | string
+  features: string[]
+  isPopular: boolean
+  displayOrder: number
+}
 
 export default function PricingPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [showDemoMessage, setShowDemoMessage] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchPlans()
+  }, [])
+
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch('/api/plans')
+      if (response.ok) {
+        const data = await response.json()
+        setPlans(data)
+      }
+    } catch (error) {
+      console.error('Error fetching plans:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubscribe = () => {
     setShowDemoMessage(true)
+  }
+
+  const formatPrice = (price: number | string): string => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price
+    return numPrice.toFixed(2)
   }
 
   return (
@@ -103,127 +138,67 @@ export default function PricingPage() {
               Choose the plan that's right for you. All plans include full access to our lead database.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Free Plan */}
-            <div className="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900">$0</span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">2 searches per month</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">50 records per search</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">Export to CSV & JSON</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-600">Search history</span>
-                </li>
-              </ul>
-              <button
-                onClick={handleSubscribe}
-                className="w-full py-3 px-4 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 transition-colors"
-              >
-                Get Started
-              </button>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading plans...</p>
             </div>
-
-            {/* Basic Plan */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-500 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow relative">
-              <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-2xl text-sm font-semibold">
-                Popular
-              </div>
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900">$15</span>
-                  <span className="text-gray-600">/month</span>
+          ) : plans.length > 0 ? (
+            <div className={`grid grid-cols-1 ${plans.length === 2 ? 'md:grid-cols-2' : plans.length >= 3 ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-1'} gap-8`}>
+              {plans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`${
+                    plan.isPopular
+                      ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-500 shadow-lg relative'
+                      : 'bg-white border-2 border-gray-200 shadow-sm'
+                  } rounded-2xl p-8 hover:shadow-lg transition-shadow`}
+                >
+                  {plan.isPopular && (
+                    <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-2xl text-sm font-semibold">
+                      Popular
+                    </div>
+                  )}
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                    <div className="mb-4">
+                      <span className="text-4xl font-bold text-gray-900">${formatPrice(plan.monthlyPrice)}</span>
+                      <span className="text-gray-600">/month</span>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      ${formatPrice(plan.yearlyPrice)}/year
+                    </div>
+                  </div>
+                  <ul className="space-y-4 mb-8">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className={plan.isPopular ? 'text-gray-700' : 'text-gray-600'}>
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={handleSubscribe}
+                    className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors ${
+                      plan.isPopular
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                        : parseFloat(formatPrice(plan.monthlyPrice)) === 0
+                        ? 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    {parseFloat(formatPrice(plan.monthlyPrice)) === 0 ? 'Get Started' : 'Subscribe Now'}
+                  </button>
                 </div>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">100 searches per month</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">100 records per search</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Export to CSV & JSON</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Search history</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Priority support</span>
-                </li>
-              </ul>
-              <button
-                onClick={handleSubscribe}
-                className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-              >
-                Subscribe Now
-              </button>
+              ))}
             </div>
-
-            {/* Ultra Plan */}
-            <div className="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-lg transition-shadow">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Ultra</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900">$25</span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">1,000 searches per month</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">1,000 records per search</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Export to CSV & JSON</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Search history</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Priority support</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Advanced filters</span>
-                </li>
-              </ul>
-              <button
-                onClick={handleSubscribe}
-                className="w-full py-3 px-4 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                Subscribe Now
-              </button>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No pricing plans available. Please check back later.</p>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
