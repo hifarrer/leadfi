@@ -15,6 +15,8 @@ interface Plan {
   name: string
   monthlyPrice: number | string
   yearlyPrice: number | string
+  stripeMonthlyPriceId: string | null
+  stripeYearlyPriceId: string | null
   features: string[]
   isPopular: boolean
   displayOrder: number
@@ -23,12 +25,27 @@ interface Plan {
 export default function PricingPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [showDemoMessage, setShowDemoMessage] = useState(false)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
+  const [processingCheckout, setProcessingCheckout] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPlans()
+    
+    // Check for success/cancel parameters in URL
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === 'true') {
+      setError(null)
+      // You could show a success message here
+      // Clean up URL
+      window.history.replaceState({}, '', '/pricing')
+    } else if (params.get('canceled') === 'true') {
+      setError('Checkout was canceled. You can try again anytime.')
+      // Clean up URL
+      window.history.replaceState({}, '', '/pricing')
+    }
   }, [])
 
   const fetchPlans = async () => {
@@ -45,8 +62,65 @@ export default function PricingPage() {
     }
   }
 
-  const handleSubscribe = () => {
-    setShowDemoMessage(true)
+  const handleSubscribe = async (plan: Plan) => {
+    // Check if user is authenticated
+    if (status !== 'authenticated') {
+      router.push('/login?redirect=/pricing')
+      return
+    }
+
+    // Check if plan has Stripe price ID for selected billing period
+    const priceId = billingPeriod === 'monthly' 
+      ? plan.stripeMonthlyPriceId 
+      : plan.stripeYearlyPriceId
+
+    if (!priceId) {
+      setError(`Stripe checkout is not configured for ${billingPeriod} billing on this plan. Please contact support.`)
+      return
+    }
+
+    // If it's a free plan, just redirect to signup
+    const price = billingPeriod === 'monthly' 
+      ? parseFloat(typeof plan.monthlyPrice === 'string' ? plan.monthlyPrice : plan.monthlyPrice.toString())
+      : parseFloat(typeof plan.yearlyPrice === 'string' ? plan.yearlyPrice : plan.yearlyPrice.toString())
+
+    if (price === 0) {
+      router.push('/signup')
+      return
+    }
+
+    setProcessingCheckout(plan.id)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId: plan.id,
+          billingPeriod: billingPeriod,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session')
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL received')
+      }
+    } catch (err: any) {
+      console.error('Checkout error:', err)
+      setError(err.message || 'Failed to start checkout. Please try again.')
+      setProcessingCheckout(null)
+    }
   }
 
   const formatPrice = (price: number | string): string => {
@@ -134,9 +208,43 @@ export default function PricingPage() {
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Simple, Transparent Pricing
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
               Choose the plan that's right for you. All plans include full access to our lead database.
             </p>
+            
+            {/* Billing Period Toggle */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <span className={`text-sm font-medium ${billingPeriod === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>
+                Monthly
+              </span>
+              <button
+                onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                role="switch"
+                aria-checked={billingPeriod === 'yearly'}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    billingPeriod === 'yearly' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-medium ${billingPeriod === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>
+                Yearly
+              </span>
+              {billingPeriod === 'yearly' && (
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                  Save up to 20%
+                </span>
+              )}
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="max-w-2xl mx-auto mb-8 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
           </div>
           {loading ? (
             <div className="text-center py-12">
@@ -162,12 +270,23 @@ export default function PricingPage() {
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                     <div className="mb-4">
-                      <span className="text-4xl font-bold text-gray-900">${formatPrice(plan.monthlyPrice)}</span>
-                      <span className="text-gray-600">/month</span>
+                      <span className="text-4xl font-bold text-gray-900">
+                        ${formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)}
+                      </span>
+                      <span className="text-gray-600">
+                        /{billingPeriod === 'monthly' ? 'month' : 'year'}
+                      </span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      ${formatPrice(plan.yearlyPrice)}/year
-                    </div>
+                    {billingPeriod === 'monthly' && (
+                      <div className="text-sm text-gray-500">
+                        ${formatPrice(plan.yearlyPrice)}/year billed annually
+                      </div>
+                    )}
+                    {billingPeriod === 'yearly' && (
+                      <div className="text-sm text-gray-500">
+                        ${formatPrice(plan.monthlyPrice)}/month if billed monthly
+                      </div>
+                    )}
                   </div>
                   <ul className="space-y-4 mb-8">
                     {plan.features.map((feature, index) => (
@@ -180,16 +299,28 @@ export default function PricingPage() {
                     ))}
                   </ul>
                   <button
-                    onClick={handleSubscribe}
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={processingCheckout === plan.id || (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId)}
                     className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors ${
                       plan.isPopular
                         ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                        : parseFloat(formatPrice(plan.monthlyPrice)) === 0
+                        : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0
                         ? 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                         : 'bg-gray-900 text-white hover:bg-gray-800'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    {parseFloat(formatPrice(plan.monthlyPrice)) === 0 ? 'Get Started' : 'Subscribe Now'}
+                    {processingCheckout === plan.id ? (
+                      <span className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </span>
+                    ) : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0 ? (
+                      'Get Started'
+                    ) : (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId) ? (
+                      'Not Available'
+                    ) : (
+                      'Subscribe Now'
+                    )}
                   </button>
                 </div>
               ))}
@@ -229,36 +360,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Demo Message Modal */}
-      {showDemoMessage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
-            <button
-              onClick={() => setShowDemoMessage(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <MagnifyingGlassIcon className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Demo Version
-              </h3>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                This is just a demo version. A payment gateway will be integrated upon site purchase.
-              </p>
-              <button
-                onClick={() => setShowDemoMessage(false)}
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Understood
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12">
