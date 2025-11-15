@@ -82,11 +82,15 @@ export async function POST(request: NextRequest) {
       }
     )
 
+    // Access current_period_end using type assertion since TypeScript types may not expose it directly
+    const subscriptionData = userSubscription as any
+    const currentPeriodEnd = subscriptionData.current_period_end || null
+
     return NextResponse.json({ 
       message: 'Subscription will be canceled at the end of the billing period',
       canceled: false,
       cancelAtPeriodEnd: true,
-      currentPeriodEnd: userSubscription.current_period_end
+      currentPeriodEnd: currentPeriodEnd
     })
   } catch (error: any) {
     console.error('Cancel subscription error:', error)
