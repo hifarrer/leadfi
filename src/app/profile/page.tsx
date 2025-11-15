@@ -173,6 +173,12 @@ export default function ProfilePage() {
                 Home
               </button>
               <button
+                onClick={() => router.push('/blog')}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Blog
+              </button>
+              <button
                 onClick={() => router.push('/history')}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >

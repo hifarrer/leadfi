@@ -66,6 +66,12 @@ export default function LandingPage() {
               <h1 className="text-2xl font-bold text-gray-900">LeadFind</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Link
+                href="/blog"
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Blog
+              </Link>
               {status === 'authenticated' ? (
                 <>
                   <button

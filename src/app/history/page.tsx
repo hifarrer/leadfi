@@ -82,6 +82,12 @@ export default function HistoryPage() {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-gray-900">Search History</h1>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push('/blog')}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Blog
+              </button>
               <span className="text-sm text-gray-600">Welcome, {session?.user?.name || session?.user?.email}</span>
               <button
                 onClick={() => router.push('/')}

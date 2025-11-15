@@ -202,6 +202,12 @@ function SearchPageContent() {
               >
                 Home
               </button>
+              <button
+                onClick={() => router.push('/blog')}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Blog
+              </button>
               <span className="text-sm text-gray-600">Welcome, {session?.user?.name || session?.user?.email}</span>
               <button
                 onClick={() => router.push('/history')}
