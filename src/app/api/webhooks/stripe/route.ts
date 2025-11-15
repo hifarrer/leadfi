@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize Stripe
     const stripe = new Stripe(settings.stripeSecretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-10-29.clover',
     })
 
     // Get the raw body for signature verification
