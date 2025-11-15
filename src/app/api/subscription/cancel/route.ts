@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Cancel the subscription at period end
-    const canceledSubscription = await stripe.subscriptions.update(
+    await stripe.subscriptions.update(
       userSubscription.id,
       {
         cancel_at_period_end: true,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       message: 'Subscription will be canceled at the end of the billing period',
       canceled: false,
       cancelAtPeriodEnd: true,
-      currentPeriodEnd: canceledSubscription.current_period_end
+      currentPeriodEnd: userSubscription.current_period_end
     })
   } catch (error: any) {
     console.error('Cancel subscription error:', error)
