@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
       yearlyPrice: plan.yearlyPrice.toNumber(),
       stripeMonthlyPriceId: plan.stripeMonthlyPriceId,
       stripeYearlyPriceId: plan.stripeYearlyPriceId,
+      rowsLimit: plan.rowsLimit,
+      searchLimit: plan.searchLimit,
       features: plan.features as string[],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder,

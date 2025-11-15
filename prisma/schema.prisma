@@ -80,6 +80,8 @@ model Plan {
   yearlyPrice          Decimal  @db.Decimal(10, 2)
   stripeMonthlyPriceId String?
   stripeYearlyPriceId  String?
+  rowsLimit            Int      @default(50) // Maximum number of records/rows per search
+  searchLimit          Int      @default(2)  // Maximum number of searches per month
   features             Json // Array of feature strings
   isPopular            Boolean  @default(false)
   displayOrder         Int      @default(0)

@@ -19,6 +19,8 @@ interface Plan {
   yearlyPrice: number | string
   stripeMonthlyPriceId?: string | null
   stripeYearlyPriceId?: string | null
+  rowsLimit?: number
+  searchLimit?: number
   features: string[]
   isPopular: boolean
   displayOrder: number
@@ -40,6 +42,8 @@ export default function AdminPlansPage() {
     yearlyPrice: '',
     stripeMonthlyPriceId: '',
     stripeYearlyPriceId: '',
+    rowsLimit: 50,
+    searchLimit: 2,
     features: [] as string[],
     isPopular: false,
     displayOrder: 0
@@ -92,6 +96,8 @@ export default function AdminPlansPage() {
       yearlyPrice: '',
       stripeMonthlyPriceId: '',
       stripeYearlyPriceId: '',
+      rowsLimit: 50,
+      searchLimit: 2,
       features: [],
       isPopular: false,
       displayOrder: plans.length
@@ -110,6 +116,8 @@ export default function AdminPlansPage() {
       yearlyPrice: typeof plan.yearlyPrice === 'string' ? plan.yearlyPrice : plan.yearlyPrice.toString(),
       stripeMonthlyPriceId: plan.stripeMonthlyPriceId || '',
       stripeYearlyPriceId: plan.stripeYearlyPriceId || '',
+      rowsLimit: plan.rowsLimit || 50,
+      searchLimit: plan.searchLimit || 2,
       features: [...plan.features],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder
@@ -128,6 +136,8 @@ export default function AdminPlansPage() {
       yearlyPrice: '',
       stripeMonthlyPriceId: '',
       stripeYearlyPriceId: '',
+      rowsLimit: 50,
+      searchLimit: 2,
       features: [],
       isPopular: false,
       displayOrder: 0
@@ -189,6 +199,8 @@ export default function AdminPlansPage() {
         yearlyPrice: parseFloat(formData.yearlyPrice),
         stripeMonthlyPriceId: formData.stripeMonthlyPriceId.trim() || null,
         stripeYearlyPriceId: formData.stripeYearlyPriceId.trim() || null,
+        rowsLimit: parseInt(formData.rowsLimit.toString()) || 50,
+        searchLimit: parseInt(formData.searchLimit.toString()) || 2,
         features: formData.features,
         isPopular: formData.isPopular,
         displayOrder: formData.displayOrder
@@ -527,6 +539,42 @@ export default function AdminPlansPage() {
                     placeholder="e.g., price_0987654321"
                   />
                   <p className="mt-1 text-xs text-gray-500">Stripe price ID for yearly billing</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="rowsLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                    Rows Limit *
+                  </label>
+                  <input
+                    type="number"
+                    id="rowsLimit"
+                    value={formData.rowsLimit}
+                    onChange={(e) => setFormData({ ...formData, rowsLimit: parseInt(e.target.value) || 50 })}
+                    required
+                    min="1"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="50"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Maximum number of records per search</p>
+                </div>
+
+                <div>
+                  <label htmlFor="searchLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Limit *
+                  </label>
+                  <input
+                    type="number"
+                    id="searchLimit"
+                    value={formData.searchLimit}
+                    onChange={(e) => setFormData({ ...formData, searchLimit: parseInt(e.target.value) || 2 })}
+                    required
+                    min="1"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="2"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Maximum number of searches per month</p>
                 </div>
               </div>
 

@@ -19,6 +19,8 @@ async function seedPlans() {
         name: 'Free',
         monthlyPrice: 0,
         yearlyPrice: 0,
+        rowsLimit: 50,
+        searchLimit: 2,
         features: [
           '2 searches per month',
           '50 records per search',
@@ -32,6 +34,8 @@ async function seedPlans() {
         name: 'Basic',
         monthlyPrice: 15,
         yearlyPrice: 150, // $15/month * 10 months (20% discount for yearly)
+        rowsLimit: 100,
+        searchLimit: 100,
         features: [
           '100 searches per month',
           '100 records per search',
@@ -46,6 +50,8 @@ async function seedPlans() {
         name: 'Ultra',
         monthlyPrice: 25,
         yearlyPrice: 250, // $25/month * 10 months (20% discount for yearly)
+        rowsLimit: 1000,
+        searchLimit: 1000,
         features: [
           '1,000 searches per month',
           '1,000 records per search',

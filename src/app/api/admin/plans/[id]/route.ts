@@ -49,6 +49,8 @@ export async function GET(
       yearlyPrice: plan.yearlyPrice.toNumber(),
       stripeMonthlyPriceId: plan.stripeMonthlyPriceId,
       stripeYearlyPriceId: plan.stripeYearlyPriceId,
+      rowsLimit: plan.rowsLimit,
+      searchLimit: plan.searchLimit,
       features: plan.features as string[],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder,
@@ -90,7 +92,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, monthlyPrice, yearlyPrice, stripeMonthlyPriceId, stripeYearlyPriceId, features, isPopular, displayOrder } = body
+    const { name, monthlyPrice, yearlyPrice, stripeMonthlyPriceId, stripeYearlyPriceId, rowsLimit, searchLimit, features, isPopular, displayOrder } = body
 
     // Check if plan exists
     const existingPlan = await prisma.plan.findUnique({
@@ -122,6 +124,12 @@ export async function PUT(
     if (stripeYearlyPriceId !== undefined) {
       updateData.stripeYearlyPriceId = stripeYearlyPriceId || null
     }
+    if (rowsLimit !== undefined) {
+      updateData.rowsLimit = parseInt(rowsLimit)
+    }
+    if (searchLimit !== undefined) {
+      updateData.searchLimit = parseInt(searchLimit)
+    }
     if (features !== undefined) {
       if (!Array.isArray(features)) {
         return NextResponse.json(
@@ -152,6 +160,8 @@ export async function PUT(
       yearlyPrice: updatedPlan.yearlyPrice.toNumber(),
       stripeMonthlyPriceId: updatedPlan.stripeMonthlyPriceId,
       stripeYearlyPriceId: updatedPlan.stripeYearlyPriceId,
+      rowsLimit: updatedPlan.rowsLimit,
+      searchLimit: updatedPlan.searchLimit,
       features: updatedPlan.features as string[],
       isPopular: updatedPlan.isPopular,
       displayOrder: updatedPlan.displayOrder,
