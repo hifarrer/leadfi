@@ -38,27 +38,71 @@ export async function POST(request: NextRequest) {
     
     console.log('[SEARCH-LEADS] Filtered parameters:', JSON.stringify(filteredParams, null, 2))
     
-    // Enforce maximum fetch_count limit (50 for demo/free plan)
+    // Get user with plan to check limits
+    const userId = (session.user as any).id
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        plan: true
+      }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Check search limit (searches per month)
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    
+    const searchesThisMonth = await prisma.searchHistory.count({
+      where: {
+        userId: userId,
+        createdAt: {
+          gte: startOfMonth
+        }
+      }
+    })
+
+    const userSearchLimit = user.plan?.searchLimit || 2
+    if (searchesThisMonth >= userSearchLimit) {
+      return NextResponse.json(
+        { 
+          error: 'Search limit reached',
+          details: `You have reached your monthly search limit of ${userSearchLimit} searches. Please upgrade your plan or wait until next month.`,
+          searchesUsed: searchesThisMonth,
+          searchLimit: userSearchLimit
+        },
+        { status: 403 }
+      )
+    }
+
+    // Enforce rows limit based on user's plan
+    const userRowsLimit = user.plan?.rowsLimit || 50
     const fetchCountValue = filteredParams.fetch_count
-    let validatedFetchCount = 50 // default
+    let validatedFetchCount = userRowsLimit // default to user's plan limit
     
     if (fetchCountValue !== undefined && fetchCountValue !== null) {
       const requestedCount = typeof fetchCountValue === 'string' 
         ? parseInt(fetchCountValue, 10) 
         : typeof fetchCountValue === 'number'
         ? fetchCountValue
-        : 50
+        : userRowsLimit
         
-      if (!isNaN(requestedCount) && requestedCount > 50) {
-        console.warn(`[SEARCH-LEADS] User attempted to request ${requestedCount} records, limiting to 50`)
-        validatedFetchCount = 50
-      } else if (!isNaN(requestedCount)) {
-        validatedFetchCount = Math.min(Math.max(requestedCount, 1), 50)
+      if (!isNaN(requestedCount)) {
+        // Limit to user's plan rowsLimit
+        validatedFetchCount = Math.min(Math.max(requestedCount, 1), userRowsLimit)
+        if (requestedCount > userRowsLimit) {
+          console.warn(`[SEARCH-LEADS] User attempted to request ${requestedCount} records, limiting to ${userRowsLimit} (plan limit)`)
+        }
       }
     }
     
     filteredParams.fetch_count = validatedFetchCount
-    console.log('[SEARCH-LEADS] Validated fetch_count:', validatedFetchCount)
+    console.log('[SEARCH-LEADS] Validated fetch_count:', validatedFetchCount, `(Plan limit: ${userRowsLimit})`)
     
     // Ensure we have at least some parameters
     console.log('[SEARCH-LEADS] Validating parameters...')

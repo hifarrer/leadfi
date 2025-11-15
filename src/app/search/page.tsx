@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useEffect, useState, Suspense } from 'react'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import SearchForm from '@/components/SearchForm'
@@ -58,12 +59,35 @@ function SearchPageContent() {
   const [searchFormParams, setSearchFormParams] = useState<any>(null)
   const [fetchCount, setFetchCount] = useState(50)
   const [currentSearchId, setCurrentSearchId] = useState<string | null>(null)
+  const [userLimits, setUserLimits] = useState<{
+    planName: string
+    rowsLimit: number
+    searchLimit: number
+    searchesUsed: number
+    searchesRemaining: number
+    canSearch: boolean
+  } | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
+    } else if (status === 'authenticated') {
+      fetchUserLimits()
     }
   }, [status, router])
+
+  const fetchUserLimits = async () => {
+    try {
+      const response = await fetch('/api/user/limits')
+      if (response.ok) {
+        const data = await response.json()
+        setUserLimits(data)
+      }
+    } catch (error) {
+      console.error('Error fetching user limits:', error)
+    }
+  }
 
   // Extract searchId from URL params
   const searchId = searchParams.get('searchId')
@@ -100,6 +124,7 @@ function SearchPageContent() {
 
   const handleSearch = async (params: any) => {
     setIsLoading(true)
+    setSearchError(null)
     setSearchFormParams(params)
     setFetchCount(params.fetch_count || 50)
     
@@ -113,15 +138,25 @@ function SearchPageContent() {
       })
 
       if (!response.ok) {
-        throw new Error('Search failed')
+        const errorData = await response.json()
+        if (response.status === 403 && errorData.error === 'Search limit reached') {
+          setSearchError(errorData.details || 'Search limit reached')
+          // Refresh limits to show updated count
+          fetchUserLimits()
+        } else {
+          throw new Error(errorData.details || errorData.error || 'Search failed')
+        }
+        return
       }
 
       const data = await response.json()
       setLeads(data.leads)
       setShowResults(true)
-    } catch (error) {
+      // Refresh limits after successful search
+      fetchUserLimits()
+    } catch (error: any) {
       console.error('Search error:', error)
-      alert('Search failed. Please try again.')
+      setSearchError(error.message || 'Search failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -201,6 +236,46 @@ function SearchPageContent() {
       <main className="py-8">
         {!showResults ? (
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* User Limits Display */}
+            {userLimits && (
+              <div className="mb-6 bg-white rounded-2xl shadow-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {userLimits.planName} Plan
+                    </h3>
+                    <div className="flex items-center gap-6 text-sm">
+                      <div>
+                        <span className="text-gray-600">Searches this month: </span>
+                        <span className={`font-semibold ${userLimits.searchesRemaining === 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                          {userLimits.searchesUsed} / {userLimits.searchLimit}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Max results per search: </span>
+                        <span className="font-semibold text-gray-900">{userLimits.rowsLimit}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {userLimits.searchesRemaining === 0 && (
+                    <Link
+                      href="/pricing"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                    >
+                      Upgrade Plan
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {searchError && (
+              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {searchError}
+              </div>
+            )}
+
             {isLoading && (
               <div className="mb-6">
                 <div className="bg-white rounded-2xl shadow-xl p-6">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import MultiSelect from './MultiSelect'
@@ -261,6 +261,39 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   })
 
   const [keywordInput, setKeywordInput] = useState('')
+  const [userLimits, setUserLimits] = useState<{
+    planName: string
+    rowsLimit: number
+    searchLimit: number
+    searchesUsed: number
+    searchesRemaining: number
+    canSearch: boolean
+  } | null>(null)
+  const [loadingLimits, setLoadingLimits] = useState(true)
+
+  useEffect(() => {
+    fetchUserLimits()
+  }, [])
+
+  const fetchUserLimits = async () => {
+    try {
+      setLoadingLimits(true)
+      const response = await fetch('/api/user/limits')
+      if (response.ok) {
+        const data = await response.json()
+        setUserLimits(data)
+        // Set initial fetch_count to user's plan limit
+        setFormData(prev => ({
+          ...prev,
+          fetch_count: Math.min(prev.fetch_count, data.rowsLimit)
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching user limits:', error)
+    } finally {
+      setLoadingLimits(false)
+    }
+  }
 
 
   const handleKeywordAdd = () => {
@@ -283,10 +316,17 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Enforce max 50 records - client-side validation
+    // Check if user can search
+    if (userLimits && !userLimits.canSearch) {
+      alert(`You have reached your monthly search limit of ${userLimits.searchLimit} searches. Please upgrade your plan or wait until next month.`)
+      return
+    }
+    
+    // Enforce rows limit based on user's plan
+    const maxRows = userLimits?.rowsLimit || 50
     const validatedData = {
       ...formData,
-      fetch_count: Math.min(Math.max(formData.fetch_count || 50, 1), 50)
+      fetch_count: Math.min(Math.max(formData.fetch_count || maxRows, 1), maxRows)
     }
     
     onSearch(validatedData)
@@ -413,19 +453,25 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               <input
                 type="number"
                 min="1"
-                max="50"
+                max={userLimits?.rowsLimit || 50}
                 value={formData.fetch_count}
                 onChange={(e) => {
                   const newValue = parseInt(e.target.value) || 1
-                  const limitedValue = Math.min(Math.max(newValue, 1), 50)
+                  const maxRows = userLimits?.rowsLimit || 50
+                  const limitedValue = Math.min(Math.max(newValue, 1), maxRows)
                   setFormData(prev => ({ ...prev, fetch_count: limitedValue }))
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 readOnly={false}
               />
-              <p className="mt-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                <strong>Free Plan Limit:</strong> Maximum 50 results per search. <Link href="/pricing" className="text-blue-600 hover:text-blue-800 underline font-medium">Please upgrade</Link> to access more records.
-              </p>
+              {userLimits && (
+                <p className="mt-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2">
+                  <strong>{userLimits.planName} Plan:</strong> Maximum {userLimits.rowsLimit} results per search.
+                  {userLimits.planName === 'Free' && (
+                    <Link href="/pricing" className="text-blue-600 hover:text-blue-800 underline font-medium ml-1">Upgrade</Link>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
