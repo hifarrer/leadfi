@@ -17,6 +17,8 @@ interface Plan {
   name: string
   monthlyPrice: number | string
   yearlyPrice: number | string
+  stripeMonthlyPriceId?: string | null
+  stripeYearlyPriceId?: string | null
   features: string[]
   isPopular: boolean
   displayOrder: number
@@ -36,6 +38,8 @@ export default function AdminPlansPage() {
     name: '',
     monthlyPrice: '',
     yearlyPrice: '',
+    stripeMonthlyPriceId: '',
+    stripeYearlyPriceId: '',
     features: [] as string[],
     isPopular: false,
     displayOrder: 0
@@ -86,6 +90,8 @@ export default function AdminPlansPage() {
       name: '',
       monthlyPrice: '',
       yearlyPrice: '',
+      stripeMonthlyPriceId: '',
+      stripeYearlyPriceId: '',
       features: [],
       isPopular: false,
       displayOrder: plans.length
@@ -102,6 +108,8 @@ export default function AdminPlansPage() {
       name: plan.name,
       monthlyPrice: typeof plan.monthlyPrice === 'string' ? plan.monthlyPrice : plan.monthlyPrice.toString(),
       yearlyPrice: typeof plan.yearlyPrice === 'string' ? plan.yearlyPrice : plan.yearlyPrice.toString(),
+      stripeMonthlyPriceId: plan.stripeMonthlyPriceId || '',
+      stripeYearlyPriceId: plan.stripeYearlyPriceId || '',
       features: [...plan.features],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder
@@ -118,6 +126,8 @@ export default function AdminPlansPage() {
       name: '',
       monthlyPrice: '',
       yearlyPrice: '',
+      stripeMonthlyPriceId: '',
+      stripeYearlyPriceId: '',
       features: [],
       isPopular: false,
       displayOrder: 0
@@ -177,6 +187,8 @@ export default function AdminPlansPage() {
         name: formData.name.trim(),
         monthlyPrice: parseFloat(formData.monthlyPrice),
         yearlyPrice: parseFloat(formData.yearlyPrice),
+        stripeMonthlyPriceId: formData.stripeMonthlyPriceId.trim() || null,
+        stripeYearlyPriceId: formData.stripeYearlyPriceId.trim() || null,
         features: formData.features,
         isPopular: formData.isPopular,
         displayOrder: formData.displayOrder
@@ -483,6 +495,38 @@ export default function AdminPlansPage() {
                     min="0"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="stripeMonthlyPriceId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Stripe Monthly Price ID
+                  </label>
+                  <input
+                    type="text"
+                    id="stripeMonthlyPriceId"
+                    value={formData.stripeMonthlyPriceId}
+                    onChange={(e) => setFormData({ ...formData, stripeMonthlyPriceId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., price_1234567890"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Stripe price ID for monthly billing</p>
+                </div>
+
+                <div>
+                  <label htmlFor="stripeYearlyPriceId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Stripe Yearly Price ID
+                  </label>
+                  <input
+                    type="text"
+                    id="stripeYearlyPriceId"
+                    value={formData.stripeYearlyPriceId}
+                    onChange={(e) => setFormData({ ...formData, stripeYearlyPriceId: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., price_0987654321"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Stripe price ID for yearly billing</p>
                 </div>
               </div>
 

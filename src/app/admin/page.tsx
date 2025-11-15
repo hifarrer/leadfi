@@ -337,6 +337,12 @@ export default function AdminPage() {
                 Manage Plans
               </button>
               <button
+                onClick={() => router.push('/admin/stripe-settings')}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Stripe Settings
+              </button>
+              <button
                 onClick={() => router.push('/')}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >

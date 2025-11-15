@@ -74,14 +74,24 @@ model Lead {
 }
 
 model Plan {
-  id           String   @id @default(cuid())
-  name         String
-  monthlyPrice Decimal  @db.Decimal(10, 2)
-  yearlyPrice  Decimal  @db.Decimal(10, 2)
-  features     Json // Array of feature strings
-  isPopular    Boolean  @default(false)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  users        User[]
+  id                   String   @id @default(cuid())
+  name                 String
+  monthlyPrice         Decimal  @db.Decimal(10, 2)
+  yearlyPrice          Decimal  @db.Decimal(10, 2)
+  stripeMonthlyPriceId String?
+  stripeYearlyPriceId  String?
+  features             Json // Array of feature strings
+  isPopular            Boolean  @default(false)
+  displayOrder         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  users                User[]
+}
+
+model Settings {
+  id                    String   @id @default("settings")
+  stripePublishableKey  String?
+  stripeSecretKey       String?
+  stripeWebhookSecret   String?
+  updatedAt             DateTime @updatedAt
 }

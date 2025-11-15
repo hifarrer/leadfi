@@ -38,6 +38,8 @@ export async function GET(request: NextRequest) {
       name: plan.name,
       monthlyPrice: plan.monthlyPrice.toNumber(),
       yearlyPrice: plan.yearlyPrice.toNumber(),
+      stripeMonthlyPriceId: plan.stripeMonthlyPriceId,
+      stripeYearlyPriceId: plan.stripeYearlyPriceId,
       features: plan.features as string[],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder,
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, monthlyPrice, yearlyPrice, features, isPopular, displayOrder } = body
+    const { name, monthlyPrice, yearlyPrice, stripeMonthlyPriceId, stripeYearlyPriceId, features, isPopular, displayOrder } = body
 
     // Validate input
     if (!name || monthlyPrice === undefined || yearlyPrice === undefined || !features) {
@@ -98,6 +100,8 @@ export async function POST(request: NextRequest) {
         name,
         monthlyPrice: new Prisma.Decimal(monthlyPrice),
         yearlyPrice: new Prisma.Decimal(yearlyPrice),
+        stripeMonthlyPriceId: stripeMonthlyPriceId || null,
+        stripeYearlyPriceId: stripeYearlyPriceId || null,
         features: features as InputJsonValue,
         isPopular: isPopular || false,
         displayOrder: displayOrder || 0
@@ -110,6 +114,8 @@ export async function POST(request: NextRequest) {
       name: plan.name,
       monthlyPrice: plan.monthlyPrice.toNumber(),
       yearlyPrice: plan.yearlyPrice.toNumber(),
+      stripeMonthlyPriceId: plan.stripeMonthlyPriceId,
+      stripeYearlyPriceId: plan.stripeYearlyPriceId,
       features: plan.features as string[],
       isPopular: plan.isPopular,
       displayOrder: plan.displayOrder,
