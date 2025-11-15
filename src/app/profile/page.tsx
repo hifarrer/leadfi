@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { UserIcon, LockClosedIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import { UserIcon, LockClosedIcon, EnvelopeIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 
 export default function ProfilePage() {
   const { data: session, status } = useSession()
@@ -23,6 +23,16 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  
+  // Plan state
+  const [userPlan, setUserPlan] = useState<{
+    id: string
+    name: string
+    monthlyPrice: number
+    yearlyPrice: number
+    features: string[]
+  } | null>(null)
+  const [loadingPlan, setLoadingPlan] = useState(true)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -30,8 +40,24 @@ export default function ProfilePage() {
     }
     if (session?.user?.email) {
       setEmail(session.user.email)
+      fetchUserPlan()
     }
   }, [status, router, session])
+
+  const fetchUserPlan = async () => {
+    try {
+      setLoadingPlan(true)
+      const response = await fetch('/api/user/plan')
+      if (response.ok) {
+        const data = await response.json()
+        setUserPlan(data.plan)
+      }
+    } catch (error) {
+      console.error('Error fetching user plan:', error)
+    } finally {
+      setLoadingPlan(false)
+    }
+  }
 
   const handleEmailUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -171,7 +197,65 @@ export default function ProfilePage() {
 
       {/* Main Content */}
       <main className="py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Current Plan Section */}
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <CreditCardIcon className="h-6 w-6 text-blue-600" />
+                Current Plan
+              </h2>
+              <button
+                onClick={() => router.push('/pricing')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View Plans →
+              </button>
+            </div>
+            
+            {loadingPlan ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading plan...</span>
+              </div>
+            ) : userPlan ? (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">{userPlan.name}</h3>
+                    <p className="text-gray-600 mt-1">
+                      ${userPlan.monthlyPrice.toFixed(2)}/month or ${userPlan.yearlyPrice.toFixed(2)}/year
+                    </p>
+                  </div>
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                    Active
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Plan Features:</p>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {userPlan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start text-sm text-gray-600">
+                        <span className="text-green-500 mr-2">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center">
+                <p className="text-gray-600 mb-4">You don't have an active plan.</p>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Browse Plans
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-6">

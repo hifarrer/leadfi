@@ -19,10 +19,11 @@ http://localhost:3000/api/webhooks/stripe
 Configure your Stripe webhook to listen for the following events:
 
 1. **checkout.session.completed** - Triggered when a customer successfully completes a checkout session
-2. **customer.subscription.updated** - Triggered when a subscription is updated (plan change, etc.)
-3. **customer.subscription.deleted** - Triggered when a subscription is canceled
-4. **invoice.payment_succeeded** - Triggered when a subscription payment succeeds
-5. **invoice.payment_failed** - Triggered when a subscription payment fails
+2. **customer.subscription.created** - Triggered when a subscription is created (handles cases where checkout.session.completed metadata might be missing)
+3. **customer.subscription.updated** - Triggered when a subscription is updated (plan change, etc.)
+4. **customer.subscription.deleted** - Triggered when a subscription is canceled
+5. **invoice.payment_succeeded** - Triggered when a subscription payment succeeds
+6. **invoice.payment_failed** - Triggered when a subscription payment fails
 
 ## Setting Up Webhooks in Stripe Dashboard
 

@@ -66,7 +66,34 @@ export async function POST(request: NextRequest) {
             })
 
             console.log(`User ${userId} subscribed to plan ${planId}`)
+          } else if (session.subscription && typeof session.subscription === 'string') {
+            // If metadata is missing, get subscription and use its metadata
+            const subscription = await stripe.subscriptions.retrieve(session.subscription)
+            if (subscription.metadata?.userId && subscription.metadata?.planId) {
+              await prisma.user.update({
+                where: { id: subscription.metadata.userId },
+                data: { planId: subscription.metadata.planId }
+              })
+              console.log(`User ${subscription.metadata.userId} subscribed to plan ${subscription.metadata.planId}`)
+            }
           }
+        }
+        break
+      }
+
+      case 'customer.subscription.created': {
+        const subscription = event.data.object as Stripe.Subscription
+        
+        if (subscription.metadata?.userId && subscription.metadata?.planId) {
+          const { userId, planId } = subscription.metadata
+
+          // Update user's plan
+          await prisma.user.update({
+            where: { id: userId },
+            data: { planId: planId }
+          })
+
+          console.log(`User ${userId} subscription created for plan ${planId}`)
         }
         break
       }

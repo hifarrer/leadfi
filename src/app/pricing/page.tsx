@@ -28,17 +28,29 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null)
   const [processingCheckout, setProcessingCheckout] = useState<string | null>(null)
+  const [cancelingSubscription, setCancelingSubscription] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPlans()
+    if (status === 'authenticated') {
+      fetchUserPlan()
+    }
     
     // Check for success/cancel parameters in URL
     const params = new URLSearchParams(window.location.search)
     if (params.get('success') === 'true') {
       setError(null)
-      // You could show a success message here
+      setSuccess('Payment successful! Your plan has been activated.')
+      // Refresh user plan after a short delay to allow webhook to process
+      setTimeout(() => {
+        if (status === 'authenticated') {
+          fetchUserPlan()
+        }
+      }, 2000)
       // Clean up URL
       window.history.replaceState({}, '', '/pricing')
     } else if (params.get('canceled') === 'true') {
@@ -46,7 +58,7 @@ export default function PricingPage() {
       // Clean up URL
       window.history.replaceState({}, '', '/pricing')
     }
-  }, [])
+  }, [status])
 
   const fetchPlans = async () => {
     try {
@@ -59,6 +71,52 @@ export default function PricingPage() {
       console.error('Error fetching plans:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUserPlan = async () => {
+    try {
+      const response = await fetch('/api/user/plan')
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentPlanId(data.planId)
+      }
+    } catch (error) {
+      console.error('Error fetching user plan:', error)
+    }
+  }
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your billing period.')) {
+      return
+    }
+
+    setCancelingSubscription(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel subscription')
+      }
+
+      if (data.canceled) {
+        setSuccess('Your subscription has been canceled.')
+        setCurrentPlanId(null)
+      } else {
+        setSuccess('Your subscription will be canceled at the end of the billing period. You will continue to have access until then.')
+      }
+    } catch (err: any) {
+      console.error('Cancel subscription error:', err)
+      setError(err.message || 'Failed to cancel subscription. Please try again.')
+    } finally {
+      setCancelingSubscription(false)
     }
   }
 
@@ -239,6 +297,13 @@ export default function PricingPage() {
               )}
             </div>
 
+            {/* Success Message */}
+            {success && (
+              <div className="max-w-2xl mx-auto mb-8 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                {success}
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="max-w-2xl mx-auto mb-8 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -262,9 +327,14 @@ export default function PricingPage() {
                       : 'bg-white border-2 border-gray-200 shadow-sm'
                   } rounded-2xl p-8 hover:shadow-lg transition-shadow`}
                 >
-                  {plan.isPopular && (
+                  {plan.isPopular && currentPlanId !== plan.id && (
                     <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-2xl text-sm font-semibold">
                       Popular
+                    </div>
+                  )}
+                  {currentPlanId === plan.id && (
+                    <div className="absolute top-0 right-0 bg-green-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-2xl text-sm font-semibold">
+                      Current Plan
                     </div>
                   )}
                   <div className="text-center mb-8">
@@ -298,30 +368,57 @@ export default function PricingPage() {
                       </li>
                     ))}
                   </ul>
-                  <button
-                    onClick={() => handleSubscribe(plan)}
-                    disabled={processingCheckout === plan.id || (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId)}
-                    className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors ${
-                      plan.isPopular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                        : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0
-                        ? 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {processingCheckout === plan.id ? (
-                      <span className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </span>
-                    ) : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0 ? (
-                      'Get Started'
-                    ) : (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId) ? (
-                      'Not Available'
-                    ) : (
-                      'Subscribe Now'
-                    )}
-                  </button>
+                  {currentPlanId === plan.id ? (
+                    <div className="space-y-2">
+                      <button
+                        disabled
+                        className="w-full py-3 px-4 font-semibold rounded-lg bg-green-600 text-white cursor-default"
+                      >
+                        Current Plan
+                      </button>
+                      {status === 'authenticated' && (
+                        <button
+                          onClick={handleCancelSubscription}
+                          disabled={cancelingSubscription}
+                          className="w-full py-2 px-4 text-sm font-medium rounded-lg border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {cancelingSubscription ? (
+                            <span className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                              Canceling...
+                            </span>
+                          ) : (
+                            'Cancel Subscription'
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribe(plan)}
+                      disabled={processingCheckout === plan.id || (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId)}
+                      className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors ${
+                        plan.isPopular
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                          : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0
+                          ? 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          : 'bg-gray-900 text-white hover:bg-gray-800'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {processingCheckout === plan.id ? (
+                        <span className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </span>
+                      ) : parseFloat(formatPrice(billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice)) === 0 ? (
+                        'Get Started'
+                      ) : (billingPeriod === 'monthly' ? !plan.stripeMonthlyPriceId : !plan.stripeYearlyPriceId) ? (
+                        'Not Available'
+                      ) : (
+                        'Subscribe Now'
+                      )}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
